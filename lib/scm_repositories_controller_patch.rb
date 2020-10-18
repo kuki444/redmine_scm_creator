@@ -2,16 +2,10 @@ require_dependency 'repositories_controller'
 
 module ScmRepositoriesControllerPatch
 
-    def self.included(base)
-        base.send(:include, InstanceMethods)
+    def self.prepended(base)
+        base.send(:prepend, InstanceMethods)
         base.class_eval do
-            unloadable
-            before_filter :delete_scm, :only => :destroy
-
-            alias_method_chain :destroy, :confirmation
-
-            alias_method_chain :create, :scm
-            alias_method_chain :update, :scm
+            before_action :delete_scm, :only => :destroy
         end
     end
 
@@ -26,45 +20,28 @@ module ScmRepositoriesControllerPatch
 
         # Original function
         #def create
-        #    attrs = pickup_extra_info
-        #    @repository = Repository.factory(params[:repository_scm])
-        #    @repository.safe_attributes = params[:repository]
-        #    if attrs[:attrs_extra].keys.any?
-        #        @repository.merge_extra_info(attrs[:attrs_extra])
-        #    end
-        #    @repository.project = @project
-        #    if request.post? && @repository.save
-        #        redirect_to settings_project_path(@project, :tab => 'repositories')
-        #    else
-        #        render :action => 'new'
-        #    end
+        #  if @repository.save
+        #    redirect_to settings_project_path(@project, :tab => 'repositories')
+        #  else
+        #    render :action => 'new'
+        #  end
         #end
 
-        def create_with_scm
+        def create
             interface = SCMCreator.interface(params[:repository_scm])
 
             if (interface && (interface < SCMCreator) && interface.enabled? &&
               ((params[:operation].present? && params[:operation] == 'add') || ScmConfig['only_creator'])) ||
                !ScmConfig['allow_add_local']
 
-                attrs = pickup_extra_info
-
                 if params[:operation].present? && params[:operation] == 'add'
-                    attrs[:attrs] = interface.sanitize(attrs[:attrs])
+                    @repository.safe_attributes = interface.sanitize(@repository.attributes)
                 end
-
-                @repository = Repository.factory(params[:repository_scm])
-                @repository.safe_attributes = params[:repository]
-                if attrs[:attrs_extra].keys.any?
-                    @repository.merge_extra_info(attrs[:attrs_extra])
-                end
-
-                @repository.project = @project
 
                 if @repository.valid? && params[:operation].present? && params[:operation] == 'add'
                     if !ScmConfig['max_repos'] || ScmConfig['max_repos'].to_i == 0 ||
                        @project.repositories.select{ |r| r.created_with_scm }.size < ScmConfig['max_repos'].to_i
-                        scm_create_repository(@repository, interface, attrs[:attrs]['url'])
+                        scm_create_repository(@repository, interface)
                     else
                         @repository.errors.add(:base, :scm_repositories_maximum_count_exceeded, :max => ScmConfig['max_repos'].to_i)
                     end
@@ -73,7 +50,7 @@ module ScmRepositoriesControllerPatch
                 if ScmConfig['only_creator'] && request.post? && @repository.errors.empty? && !@repository.created_with_scm
                     @repository.errors.add(:base, :scm_only_creator)
                 elsif !ScmConfig['allow_add_local'] && request.post? && @repository.errors.empty? && !@repository.created_with_scm &&
-                    attrs[:attrs]['url'] =~ %r{\A(file://|([a-z]:)?\.*[\\/])}i
+                    @repository.url =~ %r{\A(file://|([a-z]:)?\.*[\\/])}i
                     @repository.errors.add(:base, :scm_local_repositories_denied)
                 end
 
@@ -84,52 +61,48 @@ module ScmRepositoriesControllerPatch
                 end
 
             else
-                create_without_scm
+                super
             end
         end
 
-        def update_with_scm
-            update_without_scm
+        def update
+            super
 
             if @repository.is_a?(Repository::Github) && # special case for Github
-               params[:repository][:extra_register_hook] == '1' && !@repository.extra_hook_registered
+               params[:repository][:register_hook] == '1' && !@repository.extra_hook_registered
                 flash[:warning] = l(:warning_github_hook_registration_failed)
             end
         end
 
-        def destroy_with_confirmation
+        # Original function
+        #def destroy
+        #  @repository.destroy if request.delete?
+        #  redirect_to settings_project_path(@project, :tab => 'repositories')
+        #end
+
+        def destroy
             if @repository.created_with_scm
                 if params[:confirm]
                     unless params[:confirm_with_scm]
                         @repository.created_with_scm = false
                     end
 
-                    destroy_without_confirmation
+                    if request.delete?
+                        unless @repository.destroy
+                          flash[:warning] = l(:warning_repository_deletion_failed)
+                        end
+                    end
+                    redirect_to settings_project_path(@project, :tab => 'repositories')
                 end
             else
-                destroy_without_confirmation
+                super
             end
         end
 
-	def pickup_extra_info
-	  p       = {}
-	  p_extra = {}
-	  params[:repository].each do |k, v|
-	    if k =~ /^extra_/
-	      p_extra[k] = v
-	    else
-	      p[k] = v
-	    end
-	  end
-	  {:attrs => p, :attrs_extra => p_extra}
-	end
-
-    private :pickup_extra_info
-
     private
 
-        def scm_create_repository(repository, interface, url)
-            name = interface.repository_name(url)
+        def scm_create_repository(repository, interface)
+            name = interface.repository_name(repository.url)
             if name
                 path = interface.default_path(name)
                 if interface.repository_exists?(name)

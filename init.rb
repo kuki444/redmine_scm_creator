@@ -24,14 +24,18 @@ Rails.configuration.to_prepare do
         Project.send(:include, ScmProjectPatch)
     end
     unless RepositoriesHelper.included_modules.include?(ScmRepositoriesHelperPatch)
-        RepositoriesHelper.send(:include, ScmRepositoriesHelperPatch)
+        RepositoriesHelper.send(:prepend, ScmRepositoriesHelperPatch)
     end
     unless RepositoriesController.included_modules.include?(ScmRepositoriesControllerPatch)
-        RepositoriesController.send(:include, ScmRepositoriesControllerPatch)
+        RepositoriesController.send(:prepend, ScmRepositoriesControllerPatch)
+    end
+    unless Repository.included_modules.include?(ScmRepositoryPatch)
+        Repository.send(:include, ScmRepositoryPatch)
     end
 end
 
-Redmine::Plugin.register :redmine_scm_creator do
+Redmine::Plugin.register :redmine_scm do
+    requires_redmine version_or_higher: '4.0'
     name        'SCM Creator'
     author      'Andriy Lesyuk'
     author_url  'http://www.andriylesyuk.com/'
