@@ -17,6 +17,9 @@ en:
   text_scm_repository_created_by_scm: The repository on the file system was created especially for Redmine. By deleting its Redmine entry you may make it useless.
   text_scm_repository_destroy_confirmation: Do you want to remove the repository from the file system as well?
 
+  text_gitlab_credentials_note: Required to access private repositories
+  text_gitlab_repository_note_new: /....git or just name to create a new one
+
   warning_github_hook_registration_failed: Github service hook registration failed.
   warning_repository_deletion_failed: Repository deletion failed.
 

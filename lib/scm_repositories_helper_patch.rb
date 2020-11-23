@@ -183,6 +183,41 @@ module ScmRepositoriesHelperPatch
             githubtags
         end
 
+        def gitlab_field_tags(form, repository)
+            urltag = form.text_field(:url, :size => 60,
+                                           :required => true,
+                                           :disabled => !repository.safe_attribute?('url'))
+
+            if repository.new_record? && GitlabCreator.enabled? && !limit_exceeded
+                urltag << ' '.html_safe
+                urltag << submit_tag(l(:button_create_new_repository), :onclick => "$('#repository_operation').val('add');",
+                                                                       :id => :scm_creator_button)
+                urltag << hidden_field_tag(:operation, '', :id => 'repository_operation')
+                unless request.post?
+                    path = @project.identifier
+                    urltag << javascript_tag("$('#repository_url').val('#{escape_javascript(path)}');")
+                end
+                note = content_tag('em', "(#{GitlabCreator.options['url']}#{l(:text_gitlab_repository_note_new)})", :class => 'info')
+            elsif repository.new_record?
+                note = content_tag('em', "(#{GitlabCreator.options['url']}/....git)", :class => 'info')
+            end
+
+            gitlabtags  = content_tag('p', urltag + note)
+            gitlabtags << content_tag('p', form.text_field(:login, :size => 30)) +
+                          content_tag('p', form.password_field(:password, :size => 30,
+                                                                          :name => 'ignore',
+                                                                          :value => ((repository.new_record? || repository.password.blank?) ? '' : ('x'*15)),
+                                                                          :onfocus => "this.value=''; this.name='repository[password]';",
+                                                                          :onchange => "this.name='repository[password]';") +
+                                           content_tag('em', l(:text_gitlab_credentials_note), :class => 'info'))
+            if !Setting.autofetch_changesets? && GitlabCreator.can_register_hook?
+                gitlabtags << content_tag('p', form.check_box(:register_hook, :disabled => repository.extra_hook_registered) + ' ' +
+                                               l(:text_gitlab_register_hook_note))
+            end
+
+            gitlabtags
+        end
+
         def scm_path_info_tag(repository)
             if !repository.new_record? && repository.created_with_scm
                 interface = SCMCreator.interface(repository)

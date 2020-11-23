@@ -13,15 +13,14 @@ production:
   svn:
     path: /var/lib/svn
     svnadmin: /usr/bin/svnadmin
-    url: svn
+    url: http://localhost/svn
   git:
     path: /var/lib/git
     git: /usr/bin/git
     options: --bare
-    url: http://git.myhost.com
+    url: http://localhost/git
     update_server_info: true
     git_ext: true
-    append: trunk
   mercurial:
     path: /var/lib/mercurial
     hg: /usr/bin/hg
@@ -35,5 +34,15 @@ production:
     api:
       token: 36857b12efbccc64ce725ea8674fab6ecbd05c03
       register_hook: true
+  gitlab:
+    path: /var/lib/gitlab
+    api:
+      token: rWqosRweAMHEy2qLM8Fj
+      register_hook: true
+    url: http://localhost/gitlab
+    ssh_address: localhost
+    ssh: git@localhost
+    ssh_usr: git
+    endpoint: http://localhost/gitlab/api/v4
 
 development:

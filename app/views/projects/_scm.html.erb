@@ -8,7 +8,7 @@
 <% end %>
 
 <% if project.new_record? && ScmConfig['auto_create'] %>
-  <% count = [ SubversionCreator, GitCreator, MercurialCreator, BazaarCreator, GithubCreator ].inject(0) do |sum, scm|
+  <% count = [ SubversionCreator, GitCreator, MercurialCreator, BazaarCreator, GithubCreator, GitlabCreator ].inject(0) do |sum, scm|
                sum += 1 if scm.enabled?
                sum
              end %>
@@ -19,7 +19,8 @@
        options << [ 'Mercurial' ]  if MercurialCreator.enabled?
        options << [ 'Bazaar' ]     if BazaarCreator.enabled?
        options << [ 'Git' ]        if GitCreator.enabled?
-       options << [ 'Github' ]     if GithubCreator.enabled? %>
+       options << [ 'Github' ]     if GithubCreator.enabled?
+       options << [ 'Gitlab' ]     if GitlabCreator.enabled? %>
     <p id="project_scm">
       <label for="project_scm"><%= l(:field_scm) %> <% if ScmConfig['auto_create'] == 'force' %><span class="required">*</span><% end %></label>
       <%= select_tag('project[scm]', options_for_select(options, (request.params[:project] ? request.params[:project][:scm] : nil))) %><br />
@@ -46,6 +47,8 @@
       <%= hidden_field_tag('project[scm]', 'Bazaar') %>
     <% elsif GithubCreator.enabled? %>
       <%= hidden_field_tag('project[scm]', 'Github') %>
+    <% elsif GitlabCreator.enabled? %>
+      <%= hidden_field_tag('project[scm]', 'Gitlab') %>
     <% end %>
   <% end %>
 <% end %>

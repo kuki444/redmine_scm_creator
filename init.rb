@@ -2,6 +2,7 @@ require 'redmine'
 
 begin
     require 'octokit'
+    require 'gitlab'
 rescue LoadError
 end
 
@@ -11,6 +12,7 @@ require_dependency 'creator/mercurial_creator'
 require_dependency 'creator/git_creator'
 require_dependency 'creator/bazaar_creator'
 require_dependency 'creator/github_creator'
+require_dependency 'creator/gitlab_creator'
 
 require_dependency 'scm_config'
 require_dependency 'scm_hook'
@@ -18,6 +20,7 @@ require_dependency 'scm_hook'
 Rails.logger.info 'Starting SCM Creator Plugin for Redmine'
 
 Redmine::Scm::Base.add('Github')
+Redmine::Scm::Base.add('Gitlab')
 
 Rails.configuration.to_prepare do
     unless Project.included_modules.include?(ScmProjectPatch)
@@ -34,7 +37,7 @@ Rails.configuration.to_prepare do
     end
 end
 
-Redmine::Plugin.register :redmine_scm do
+Redmine::Plugin.register :redmine_scm_creator do
     requires_redmine version_or_higher: '4.0'
     name        'SCM Creator'
     author      'Andriy Lesyuk'
